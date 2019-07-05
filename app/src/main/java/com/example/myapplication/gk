@@ -1,0 +1,205 @@
+package com.teb.kobidijital.feature.noncustomer.atmbranch;
+
+import android.annotation.SuppressLint;
+import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.view.GestureDetectorCompat;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.animation.Animation;
+import android.view.animation.Transformation;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.teb.kobidijital.R;
+import com.teb.kobidijital.annotations.InjectableFragment;
+import com.teb.kobidijital.data.models.clientonly.AtmBranch;
+import com.teb.kobidijital.databinding.FragmentMapBinding;
+import com.teb.kobidijital.feature.noncustomer.atmbranch.gesture.MapBottomTouchGesture;
+import com.teb.kobidijital.main.base.BaseFragment;
+
+import org.parceler.Parcel;
+
+@InjectableFragment
+public class MapFragment extends BaseFragment<MapFragment.FragmentState> {
+
+    private FragmentMapBinding binding;
+    private GoogleMap mMap;
+    private int collapsedAdressHeight = 0;
+    private int totalHeight = 0;
+    private int totalShowingPart = 0;
+
+    public static MapFragment newInstance() {
+        Bundle args = new Bundle();
+
+        MapFragment fragment = new MapFragment();
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    @Parcel
+    public static class FragmentState {
+    }
+
+    @Override
+    public void onFreshStart() {
+
+    }
+
+    @Override
+    public void onRestoredStart() {
+
+    }
+
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        binding = dataBindingOf(container, R.layout.fragment_map);
+        initMapView();
+
+
+        ViewTreeObserver vtoAdress = binding.bottom.adressConstraint.getViewTreeObserver();
+        vtoAdress.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                binding.bottom.adressConstraint.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                collapsedAdressHeight = binding.bottom.adressConstraint.getMeasuredHeight();
+            }
+        });
+
+
+        ViewTreeObserver vto = binding.bottom.llRoot.getViewTreeObserver();
+        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                binding.bottom.adressConstraint.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                totalShowingPart = binding.bottom.viewTop.getHeight() + binding.bottom.gpsButton.getHeight();
+                totalHeight = binding.bottom.llRoot.getMeasuredHeight();
+                binding.bottom.llRoot.getLayoutParams().height = totalShowingPart;
+                binding.bottom.llRoot.requestLayout();
+
+            }
+        });
+
+
+        return binding.getRoot();
+    }
+
+    private void initMapView() {
+        GoogleApiAvailability api = GoogleApiAvailability.getInstance();
+
+        int resultCode = api.isGooglePlayServicesAvailable(getContext());
+
+        if (resultCode != ConnectionResult.SUCCESS) {
+            try {
+                api.getErrorDialog(getActivity(), resultCode, 1111);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
+//        if (!LocationUtil.isLocationEnabled(this)) {
+//            showEnabledGPSAlert();
+//        }
+
+        if (mMap == null) {
+            SupportMapFragment supportMapFragment = ((SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map));
+            supportMapFragment.getMapAsync(googleMap -> {
+                mMap = googleMap;
+
+                if (mMap != null) {
+                    setupMap();
+                }
+            });
+
+        }
+    }
+
+    private void setupMap() {
+        if (mMap == null) return;
+
+        mMap.setOnMarkerClickListener(marker -> {
+            //deselectCurrentMarker(false);
+
+            //AtmBranchKanal kanal = (AtmBranchKanal) marker.getTag();
+
+            //if (atmInfoView.getVisibility() != View.VISIBLE) {
+            //   atmInfoView.setVisibility(View.VISIBLE);
+            // }
+
+            //atmInfoView.fillData(kanal);
+
+            //marker.setIcon(getDescriptor(kanal, true));
+            //markerCurrent = marker;
+
+            return false;
+        });
+
+        mMap.setOnMapClickListener(latLng -> {
+            //deselectCurrentMarker(true);
+        });
+        mMap.getUiSettings().setAllGesturesEnabled(true);
+        mMap.getUiSettings().setCompassEnabled(false);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+
+        //presenter.requestAtmDatas();
+
+        //attemptToFindLocation();
+
+
+    }
+
+
+    public void hideBottomSheet() {
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    public void showBottomSheet(AtmBranch atmMap) {
+        binding.bottom.llRoot.post(() -> {
+
+            binding.bottom.adressConstraint.getLayoutParams().height = 0; //Daha sonra açıcaz
+            binding.bottom.adressConstraint.requestLayout();
+
+            final int collapsedHeight = totalHeight - collapsedAdressHeight;
+            Animation openAnimation = new Animation() {
+                @Override
+                protected void applyTransformation(float interpolatedTime, Transformation t) {
+                    binding.bottom.llRoot.getLayoutParams().height = (int) (collapsedHeight * interpolatedTime);
+                     binding.bottom.llRoot.requestLayout();
+                }
+
+                @Override
+                public boolean willChangeBounds() {
+                    return true;
+                }
+            };
+
+            openAnimation.setDuration(300);
+            binding.bottom.llRoot.startAnimation(openAnimation);
+
+
+            final MapBottomTouchGesture mapBottomTouchGesture = new MapBottomTouchGesture(binding.bottom.adressConstraint, collapsedAdressHeight);
+            GestureDetectorCompat mDetector = new GestureDetectorCompat(getContext(), mapBottomTouchGesture);
+            binding.bottom.llRoot.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent motionEvent) {
+                    if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                        mapBottomTouchGesture.onActionUp();
+                        return false;
+                    }
+                    return mDetector.onTouchEvent(motionEvent);
+                }
+            });
+        });
+    }
+}
