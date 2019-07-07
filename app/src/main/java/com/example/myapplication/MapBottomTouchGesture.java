@@ -1,4 +1,4 @@
-package com.teb.kobidijital.feature.noncustomer.atmbranch.gesture;
+package com.example.myapplication;
 
 import android.animation.ValueAnimator;
 import android.view.GestureDetector;

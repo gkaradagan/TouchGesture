@@ -1,154 +1,106 @@
 package com.example.myapplication;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.GestureDetectorCompat;
-
-import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
-import android.view.animation.TranslateAnimation;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
+import android.view.animation.Transformation;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GestureDetectorCompat;
+import androidx.databinding.DataBindingUtil;
+
+import com.example.myapplication.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
-    RelativeLayout llHeader;
-    LinearLayout llRoot;
-    LinearLayout llContent;
-    LinearLayout footer;
 
-    Button buttonShow, buttonHide;
-    private int contentHeight = 0;
+    ActivityMainBinding binding;
+    private int collapsedAdressHeight = 0;
+    private int totalHeight = 0;
+    private int totalShowingPart = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        llRoot = findViewById(R.id.llRoot);
-        llHeader = findViewById(R.id.rlHeader);
-        llContent = findViewById(R.id.llContent);
-        footer = findViewById(R.id.footer);
-        buttonShow = findViewById(R.id.buttonShow);
-        buttonHide = findViewById(R.id.buttonHide);
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
 
-        buttonShow.setOnClickListener(new View.OnClickListener() {
+        ViewTreeObserver vtoAdress = binding.adressConstraint.getViewTreeObserver();
+        vtoAdress.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
             @Override
-            public void onClick(View view) {
-                showPopup();
+            public void onGlobalLayout() {
+                binding.adressConstraint.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                collapsedAdressHeight = binding.adressConstraint.getMeasuredHeight();
             }
         });
 
 
-        buttonHide.setOnClickListener(new View.OnClickListener() {
+        ViewTreeObserver vto = binding.llRoot.getViewTreeObserver();
+        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
             @Override
-            public void onClick(View view) {
-                hidePopup();
+            public void onGlobalLayout() {
+                binding.adressConstraint.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                totalShowingPart = binding.viewTop.getHeight() + binding.gpsButton.getHeight();
+                totalHeight = binding.llRoot.getMeasuredHeight();
+                binding.llRoot.getLayoutParams().height = 0;
+                binding.llRoot.requestLayout();
+
             }
         });
+
+        binding.buttonShow.setOnClickListener(view -> showBottomSheet());
 
     }
 
-    private GestureDetectorCompat mDetector;
-
-    private void hidePopup() {
-        llRoot.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        int totalHeight = llRoot.getMeasuredHeight();
-
-        Animation animation = new TranslateAnimation(0, 0, 0, totalHeight);
-        animation.setDuration(300);
-        animation.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                llRoot.setVisibility(View.INVISIBLE);
-                llContent.getLayoutParams().height = contentHeight;
-                llContent.requestLayout();
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
-
-        llRoot.startAnimation(animation);
+    public void hideBottomSheet() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private void showPopup() {
-        llRoot.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        int totalHeight = llRoot.getMeasuredHeight();
+    public void showBottomSheet() {
+        binding.llRoot.post(() -> {
 
-        contentHeight = llContent.getHeight();
-        llContent.getLayoutParams().height = 0; //Daha sonra açıcaz
-        llContent.requestLayout();
 
-        Animation animation = new TranslateAnimation(0, 0, totalHeight - contentHeight, 0);
-        animation.setDuration(300);
-        llRoot.setVisibility(View.VISIBLE);
-        llRoot.startAnimation(animation);
 
-        mDetector = new GestureDetectorCompat(this, new TouchGesture(llContent, contentHeight));
-        llRoot.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View view, MotionEvent motionEvent) {
-                if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                    final int nowSize = llContent.getLayoutParams().height;
-                    if (nowSize >= contentHeight / 2) {
-                        //GoUp
-                        ValueAnimator valueAnimator = ValueAnimator.ofInt(nowSize, contentHeight);
-                        valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                            @Override
-                            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                                int animatedValue = (int) valueAnimator.getAnimatedValue();
-                                int valueDiff = animatedValue - nowSize;
-                                int newSize = llContent.getLayoutParams().height + valueDiff;
-                                if (newSize >= contentHeight) {
-                                    llContent.getLayoutParams().height = contentHeight;
-                                } else {
-                                    llContent.getLayoutParams().height = newSize;
-                                }
-                                llContent.requestLayout();
+            binding.adressConstraint.getLayoutParams().height = 0; //Daha sonra açıcaz
+            binding.adressConstraint.requestLayout();
 
-                            }
-                        });
-                        valueAnimator.setDuration(300);
-                        valueAnimator.start();
-                    } else {
-                        //GoDown
-                        ValueAnimator valueAnimator = ValueAnimator.ofInt(nowSize, 0);
-                        valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                            @Override
-                            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                                int animatedValue = (int) valueAnimator.getAnimatedValue();
-                                int valueDiff = nowSize - animatedValue;
-                                int newSize = llContent.getLayoutParams().height - valueDiff;
-                                if (newSize <= 0) {
-                                    llContent.getLayoutParams().height = 0;
-                                } else {
-                                    llContent.getLayoutParams().height = newSize;
-                                }
-                                llContent.requestLayout();
-
-                            }
-                        });
-                        valueAnimator.setDuration(300);
-                        valueAnimator.start();
-                    }
-                    return false;
+            final int collapsedHeight = totalHeight - collapsedAdressHeight;
+            Animation openAnimation = new Animation() {
+                @Override
+                protected void applyTransformation(float interpolatedTime, Transformation t) {
+                    binding.llRoot.getLayoutParams().height = (int) (collapsedHeight * interpolatedTime);
+                    binding.llRoot.requestLayout();
                 }
-                return mDetector.onTouchEvent(motionEvent);
-            }
+
+                @Override
+                public boolean willChangeBounds() {
+                    return true;
+                }
+            };
+
+            openAnimation.setDuration(300);
+            binding.llRoot.startAnimation(openAnimation);
+
+
+            final MapBottomTouchGesture mapBottomTouchGesture = new MapBottomTouchGesture(binding.adressConstraint, collapsedAdressHeight);
+            GestureDetectorCompat mDetector = new GestureDetectorCompat(this, mapBottomTouchGesture);
+            binding.llRoot.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent motionEvent) {
+                    if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                        mapBottomTouchGesture.onActionUp();
+                        return false;
+                    }
+                    return mDetector.onTouchEvent(motionEvent);
+                }
+            });
         });
     }
+
 }
