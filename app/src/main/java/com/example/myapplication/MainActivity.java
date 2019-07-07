@@ -1,14 +1,17 @@
 package com.example.myapplication;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
-import android.view.animation.Transformation;
+import android.view.animation.TranslateAnimation;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GestureDetectorCompat;
@@ -20,8 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     ActivityMainBinding binding;
     private int collapsedAdressHeight = 0;
-    private int totalHeight = 0;
-    private int totalShowingPart = 0;
+    MapBottomTouchGesture mapBottomTouchGesture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,66 +31,127 @@ public class MainActivity extends AppCompatActivity {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
 
-        ViewTreeObserver vtoAdress = binding.adressConstraint.getViewTreeObserver();
-        vtoAdress.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-            @Override
-            public void onGlobalLayout() {
-                binding.adressConstraint.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                collapsedAdressHeight = binding.adressConstraint.getMeasuredHeight();
+        binding.buttonShow.setOnClickListener(view -> showBottomSheet(0));
+        binding.buttonShowATM.setOnClickListener(view -> showBottomSheet(1));
+        binding.buttonHide.setOnClickListener(view -> hideBottomSheet());
+        binding.buttonChangeText.setOnClickListener(view -> {
+            String newText = "Gorkem Karadoğan";
+            int lineCount = binding.tvAdresValue.getLineCount();
+            binding.tvAdresValue.setText(newText);
+            int lastLineCount = binding.tvAdresValue.getLineCount();
+            int difference = (lastLineCount - lineCount) * binding.tvAdresValue.getLineHeight();
+            if (lastLineCount > lineCount) {
+                collapsedAdressHeight = collapsedAdressHeight + Math.abs(difference);
+            } else {
+                collapsedAdressHeight = collapsedAdressHeight - Math.abs(difference);
+            }
+            mapBottomTouchGesture.setMax(collapsedAdressHeight);
+            if (mapBottomTouchGesture.getDirection() != null && mapBottomTouchGesture.getDirection() == MapBottomTouchGesture.Direction.up){
+                binding.llAdress.getLayoutParams().height = collapsedAdressHeight; //Aciksa !!
+                binding.llAdress.requestLayout();
             }
         });
-
-
-        ViewTreeObserver vto = binding.llRoot.getViewTreeObserver();
-        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-            @Override
-            public void onGlobalLayout() {
-                binding.adressConstraint.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                totalShowingPart = binding.viewTop.getHeight() + binding.gpsButton.getHeight();
-                totalHeight = binding.llRoot.getMeasuredHeight();
-                binding.llRoot.getLayoutParams().height = 0;
-                binding.llRoot.requestLayout();
-
-            }
-        });
-
-        binding.buttonShow.setOnClickListener(view -> showBottomSheet());
 
     }
 
     public void hideBottomSheet() {
+        binding.llRoot.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        int totalHeight = binding.llRoot.getMeasuredHeight();
+
+        Animation animation = new TranslateAnimation(0, 0, 0, totalHeight);
+        animation.setDuration(300);
+        animation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                binding.llRoot.clearAnimation();
+                binding.llRoot.setVisibility(View.GONE);
+                binding.llAdress.getLayoutParams().height = collapsedAdressHeight;
+                binding.llAdress.requestLayout();
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        Animation gpsAnim = new TranslateAnimation(0, 0, 0, totalHeight);
+        gpsAnim.setDuration(300);
+        gpsAnim.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                binding.gpsButton.clearAnimation();
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+        binding.llRoot.startAnimation(animation);
+        binding.gpsButton.startAnimation(gpsAnim);
+
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    public void showBottomSheet() {
+    public void showBottomSheet(int type) { //0 Şube 1 ATM
         binding.llRoot.post(() -> {
 
+            binding.llRoot.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            int totalHeight = binding.llRoot.getMeasuredHeight();
 
+            binding.llAdress.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            collapsedAdressHeight = binding.llAdress.getMeasuredHeight();
 
-            binding.adressConstraint.getLayoutParams().height = 0; //Daha sonra açıcaz
-            binding.adressConstraint.requestLayout();
+            binding.llAdress.getLayoutParams().height = 0; //Daha sonra açıcaz
+            binding.llAdress.requestLayout();
 
-            final int collapsedHeight = totalHeight - collapsedAdressHeight;
-            Animation openAnimation = new Animation() {
+            Animation animation = new TranslateAnimation(0, 0, totalHeight - collapsedAdressHeight, 0);
+            animation.setAnimationListener(new Animation.AnimationListener() {
                 @Override
-                protected void applyTransformation(float interpolatedTime, Transformation t) {
-                    binding.llRoot.getLayoutParams().height = (int) (collapsedHeight * interpolatedTime);
-                    binding.llRoot.requestLayout();
+                public void onAnimationStart(Animation animation) {
+
                 }
 
                 @Override
-                public boolean willChangeBounds() {
-                    return true;
+                public void onAnimationEnd(Animation animation) {
+                    //Adres Burada Güncellenecek !
+                    String newText = "asdlsadmölsaşdölsşadösalşdölsaşdölsaöldöasld sadlsaödlsaö salşdösalşdösalşdösalsaöm sa asldlsaö lşsaö lsa sa ösaldösalşdösalşdöasd";
+                    int lineCount = binding.tvAdresValue.getLineCount();
+                    binding.tvAdresValue.setText(newText);
+                    int lastLineCount = binding.tvAdresValue.getLineCount();
+                    int difference = (lastLineCount - lineCount) * binding.tvAdresValue.getLineHeight();
+                    if (lastLineCount > lineCount) {
+                        collapsedAdressHeight = collapsedAdressHeight + Math.abs(difference);
+                    } else {
+                        collapsedAdressHeight = collapsedAdressHeight - Math.abs(difference);
+                    }
+                    mapBottomTouchGesture.setMax(collapsedAdressHeight);
+
                 }
-            };
 
-            openAnimation.setDuration(300);
-            binding.llRoot.startAnimation(openAnimation);
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+
+            animation.setDuration(300);
+            binding.llRoot.setVisibility(View.VISIBLE);
+            binding.llRoot.startAnimation(animation);
+            binding.gpsButton.startAnimation(animation);
 
 
-            final MapBottomTouchGesture mapBottomTouchGesture = new MapBottomTouchGesture(binding.adressConstraint, collapsedAdressHeight);
+            mapBottomTouchGesture = new MapBottomTouchGesture(binding.llAdress, collapsedAdressHeight);
             GestureDetectorCompat mDetector = new GestureDetectorCompat(this, mapBottomTouchGesture);
             binding.llRoot.setOnTouchListener(new View.OnTouchListener() {
                 @Override
@@ -103,4 +166,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private int getTextHeight(TextView textView, String text) {
+        textView.setText(text);
+        Rect bounds = new Rect();
+        Paint textPaint = textView.getPaint();
+        textPaint.getTextBounds(text, 0, text.length(), bounds);
+        return bounds.height();
+    }
 }

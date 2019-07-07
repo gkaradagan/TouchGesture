@@ -8,10 +8,15 @@ import android.view.View;
 public class MapBottomTouchGesture extends GestureDetector.SimpleOnGestureListener {
     private final View view;
     private int max;
+    private Direction direction = Direction.down;
 
     public MapBottomTouchGesture(View view, int max) {
 
         this.view = view;
+        this.max = max;
+    }
+
+    public void setMax(int max) {
         this.max = max;
     }
 
@@ -87,6 +92,7 @@ public class MapBottomTouchGesture extends GestureDetector.SimpleOnGestureListen
             });
             valueAnimator.setDuration(300);
             valueAnimator.start();
+            direction = Direction.up;
         } else {
             //GoDown
             ValueAnimator valueAnimator = ValueAnimator.ofInt(nowSize, 0);
@@ -104,9 +110,13 @@ public class MapBottomTouchGesture extends GestureDetector.SimpleOnGestureListen
             });
             valueAnimator.setDuration(300);
             valueAnimator.start();
+            direction = Direction.down;
         }
     }
 
+    public Direction getDirection() {
+        return direction;
+    }
 
     /**
      * Given two points in the plane p1=(x1, x2) and p2=(y1, y1), this method
