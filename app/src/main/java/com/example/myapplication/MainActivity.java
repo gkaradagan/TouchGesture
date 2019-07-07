@@ -57,65 +57,66 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideBottomSheet() {
-        int difference = 0;
-        int tag = (int) binding.llRoot.getTag();
-        if (tag == 1) {
-            int lineCount = 1;
-            binding.tvAdresValue.setText(binding.tvAdresValue.getText());
-            int lastLineCount = binding.tvAdresValue.getLineCount();
-            difference = (lastLineCount - lineCount) * binding.tvAdresValue.getLineHeight();
+        if (binding.llRoot.getVisibility() != View.GONE) {
+            int difference = 0;
+            int tag = (int) binding.llRoot.getTag();
+            if (tag == 1) {
+                int lineCount = 1;
+                int lastLineCount = binding.tvAdresValue.getLineCount();
+                difference = (lastLineCount - lineCount) * binding.tvAdresValue.getLineHeight();
+            }
+
+
+            binding.llRoot.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            int totalHeight = binding.llRoot.getMeasuredHeight() + difference;
+
+
+            Animation animation = new TranslateAnimation(0, 0, 0, totalHeight);
+            animation.setDuration(300);
+            animation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    binding.llRoot.clearAnimation();
+                    binding.llRoot.setVisibility(View.GONE);
+                    binding.llAdress.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+                    binding.llAdress.requestLayout();
+                    binding.mesafeConstraint.setVisibility(View.VISIBLE);
+                    binding.tvAdresValue.setText("");
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+            Animation gpsAnim = new TranslateAnimation(0, 0, 0, totalHeight);
+            gpsAnim.setDuration(300);
+            gpsAnim.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    binding.gpsButton.clearAnimation();
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+            binding.llRoot.startAnimation(animation);
+            binding.gpsButton.startAnimation(gpsAnim);
+            mapBottomTouchGesture = null;
         }
-
-
-        binding.llRoot.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        int totalHeight = binding.llRoot.getMeasuredHeight() + difference;
-
-
-        Animation animation = new TranslateAnimation(0, 0, 0, totalHeight);
-        animation.setDuration(300);
-        animation.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                binding.llRoot.clearAnimation();
-                binding.tvAdresValue.setText("");
-                binding.mesafeConstraint.setVisibility(View.VISIBLE);
-                binding.llAdress.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-                binding.llAdress.requestLayout();
-                binding.llRoot.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
-        Animation gpsAnim = new TranslateAnimation(0, 0, 0, totalHeight);
-        gpsAnim.setDuration(300);
-        gpsAnim.setAnimationListener(new Animation.AnimationListener() {
-            @Override
-            public void onAnimationStart(Animation animation) {
-
-            }
-
-            @Override
-            public void onAnimationEnd(Animation animation) {
-                binding.gpsButton.clearAnimation();
-            }
-
-            @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
-        });
-        binding.llRoot.startAnimation(animation);
-        binding.gpsButton.startAnimation(gpsAnim);
-        mapBottomTouchGesture = null;
-
     }
 
     @SuppressLint("ClickableViewAccessibility")
