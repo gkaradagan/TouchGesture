@@ -6,7 +6,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 public class MapBottomTouchGesture extends GestureDetector.SimpleOnGestureListener {
-    private final View view;
+    private View view;
     private int max;
     private Direction direction = Direction.down;
 
@@ -16,8 +16,28 @@ public class MapBottomTouchGesture extends GestureDetector.SimpleOnGestureListen
         this.max = max;
     }
 
+    public View getView() {
+        return view;
+    }
+
+    public int getMax() {
+        return max;
+    }
+
     public void setMax(int max) {
         this.max = max;
+    }
+
+    public void setDirection(Direction direction) {
+        this.direction = direction;
+    }
+
+    public void setView(View view) {
+        this.view = view;
+    }
+
+    public Direction getDirection() {
+        return direction;
     }
 
     @Override
@@ -112,10 +132,6 @@ public class MapBottomTouchGesture extends GestureDetector.SimpleOnGestureListen
             valueAnimator.start();
             direction = Direction.down;
         }
-    }
-
-    public Direction getDirection() {
-        return direction;
     }
 
     /**
